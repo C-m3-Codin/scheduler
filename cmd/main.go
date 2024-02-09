@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/c-m3-codin/gsched/models"
 	"github.com/c-m3-codin/gsched/utility"
 )
 
@@ -15,27 +16,24 @@ func main() {
 	utconfig := utility.InitConfig()
 	config := Config{&utconfig}
 	config.WaitGroup.Add(1)
-	go changeEvent(config.ScheduleChangeChannel)
+	// go changeEvent(config.ScheduleChangeChannel)
 	go config.pulse()
 	config.WaitGroup.Wait()
 
 }
 
-func changeEvent(change chan bool) {
-	for {
-		if <-change {
-			fmt.Println("fileChanged")
-		}
-	}
-}
-
 func (c Config) pulse() {
 	defer c.WaitGroup.Done()
+	var scheduleFile models.ScheduleFile
+	scheduleFile = c.LoadScheduleFile()
 	for {
 		select {
+
+		case <-c.ScheduleChangeChannel:
+			scheduleFile = c.LoadScheduleFile()
 		case <-c.Ticker.C:
 			c.scheduleUpdateCheck()
-			emitTasks()
+			emitTasks(scheduleFile.Jobs)
 
 		}
 
@@ -58,18 +56,7 @@ func (c *Config) scheduleUpdateCheck() {
 
 }
 
-type ScheduleFile struct {
-	Jobs []Job `json:"jobs"`
-}
-
-type Job struct {
-	JobName  string `json:"jobName"`
-	Priority int    `json:"priority"`
-	Job      string `json:"job"`
-	CronTime string `json:"cronTime"`
-}
-
-func emitTasks() {
+func emitTasks([]models.Job) {
 
 	fmt.Println("Emmited Task")
 

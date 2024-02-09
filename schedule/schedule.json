@@ -1,10 +1,10 @@
 {
    "jobs": [
     {
-        "jobName":"abc",
+        "jobName":"newJob",
         "priority":5,
         "job":"fileName",
-        "cronTime":"2 4 * * *"
+        "cronTime":"1 4 * * *"
     }
 ]
 }
