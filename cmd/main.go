@@ -2,21 +2,22 @@ package main
 
 import (
 	"fmt"
-	"sync"
-	"time"
 
 	"github.com/c-m3-codin/gsched/utility"
 )
 
+type Config struct {
+	*utility.Config
+}
+
 func main() {
-	filePath := "../schedule/schedule.json"
-	change := make(chan bool, 1)
-	ticker := time.NewTicker(1 * time.Second)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go changeEvent(change)
-	go checkChange(change, filePath, ticker, &wg)
-	wg.Wait()
+
+	utconfig := utility.InitConfig()
+	config := Config{&utconfig}
+	config.WaitGroup.Add(1)
+	go changeEvent(config.ScheduleChangeChannel)
+	go config.pulse()
+	config.WaitGroup.Wait()
 
 }
 
@@ -28,24 +29,48 @@ func changeEvent(change chan bool) {
 	}
 }
 
-func checkChange(change chan bool, filePath string, ticker *time.Ticker, wg *sync.WaitGroup) {
-	defer wg.Done()
-	var hashPrev string
+func (c Config) pulse() {
+	defer c.WaitGroup.Done()
 	for {
 		select {
-		case <-ticker.C:
-			hash, err := utility.Filemd5sum(filePath)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			if hashPrev != hash {
-				hashPrev = hash
-				change <- true
-			}
-			fmt.Println(hash)
+		case <-c.Ticker.C:
+			c.scheduleUpdateCheck()
+			emitTasks()
 
 		}
 
 	}
+}
+
+func (c *Config) scheduleUpdateCheck() {
+
+	hash, err := utility.Filemd5sum(c.ScheduleFile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("\n\n previous hash is", c.ScheduleFileHash)
+	if c.ScheduleFileHash != hash {
+		c.ScheduleFileHash = hash
+		c.ScheduleChangeChannel <- true
+	}
+	fmt.Println(hash)
+
+}
+
+type ScheduleFile struct {
+	Jobs []Job `json:"jobs"`
+}
+
+type Job struct {
+	JobName  string `json:"jobName"`
+	Priority int    `json:"priority"`
+	Job      string `json:"job"`
+	CronTime string `json:"cronTime"`
+}
+
+func emitTasks() {
+
+	fmt.Println("Emmited Task")
+
 }
