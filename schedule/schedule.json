@@ -1,0 +1,10 @@
+{
+   "jobs": [
+    {
+        "jobName":"abc",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"2 4 * * *"
+    }
+]
+}
