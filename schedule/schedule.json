@@ -4,6 +4,71 @@
         "jobName":"newJob",
         "priority":5,
         "job":"fileName",
+        "cronTime":"* * * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"* 17 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"* 17 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"* 17 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"56 16 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"5 10 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"1 4 * * *"
+    },{
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"1 4 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"1 4 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"1 4 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"1 4 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"1 4 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
+        "cronTime":"1 4 * * *"
+    },  {
+        "jobName":"newJob",
+        "priority":5,
+        "job":"fileName",
         "cronTime":"1 4 * * *"
     }
 ]
