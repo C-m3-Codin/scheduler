@@ -19,7 +19,7 @@ func init() {
 
 	fmt.Println("\n\n\n\n\n init in kafka worked \n\n\n\n\n ")
 	config := &kafka.ConfigMap{
-		"bootstrap.servers":       "127.0.0.1:9092",
+		"bootstrap.servers":       "broker:9092,broker-2:9093",
 		"broker.version.fallback": "0.10.0.0", // Fallback broker version, for older brokers
 		"api.version.request":     true,       //
 	}
