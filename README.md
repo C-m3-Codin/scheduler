@@ -7,4 +7,11 @@ This repository contains a job dispatcher written in Go that dispatches jobs to 
 - **Scheduled Job Dispatching**: Dispatches jobs based on cron expressions.
 - **Kafka Integration**: Pushes jobs to a Kafka queue.
 - **Configuration Monitoring**: Monitors changes in the schedule configuration file.
-- **Concur
+- **Concurrent Task Management**: Utilizes worker goroutines for concurrent job processing.
+
+### Prerequisites
+
+- Go (version 1.16+ recommended)
+- Kafka
+- Zookeeper (for Kafka coordination)
+
