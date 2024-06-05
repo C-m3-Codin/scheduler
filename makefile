@@ -1,8 +1,23 @@
+# Makefile
+
+.PHONY: hllo build run deps fmt vendor all
+
 hllo:
 	echo "Hello"
 
-build:
+deps:
+	go mod tidy
+
+fmt:
+	go fmt ./...
+
+vendor:
+	go mod vendor
+
+build: fmt deps vendor
 	go build -o bin/main cmd/main.go
 
-run:
+run: fmt deps vendor
 	go run cmd/main.go
+
+all: deps fmt vendor build

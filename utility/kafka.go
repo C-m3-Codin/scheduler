@@ -61,8 +61,7 @@ func PushToQueue(job models.Job) {
 		}
 	}()
 
-	var key string
-	key = strconv.Itoa(job.Priority)
+	key := strconv.Itoa(job.Priority)
 	data, err := json.Marshal(job)
 	if err != nil {
 		fmt.Printf("Couldnt marshall the job details")
