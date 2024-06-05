@@ -18,6 +18,6 @@ This repository contains a job dispatcher written in Go that dispatches jobs to 
 
 ## TODO
 
-- [ ] Consumers 1:Workers that consume jobs from kafka
-- [ ] Dynamic Worker Pool 2: Worker Pool that consumes and increases and decreases worker based on tasks at hand
+- [ ] Consumers: Workers that consume jobs from kafka
+- [ ] Dynamic Worker Pooling: Worker Pool that consumes and increases and decreases worker based on tasks at hand
 
