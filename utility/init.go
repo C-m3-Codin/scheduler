@@ -14,7 +14,7 @@ type Config struct {
 }
 
 func InitConfig() (config Config) {
-	filePath := "../schedule/schedule.json"
+	filePath := "schedule/schedule.json"
 	change := make(chan bool, 1)
 	ticker := time.NewTicker(10 * time.Second)
 	var wg sync.WaitGroup
