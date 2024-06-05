@@ -18,12 +18,12 @@ type Config struct {
 func main() {
 	fmt.Println("there")
 
-	// utconfig := utility.InitConfig()
-	// config := Config{&utconfig}
-	// config.WaitGroup.Add(1)
-	// // go changeEvent(config.ScheduleChangeChannel)
-	// go config.pulse()
-	// config.WaitGroup.Wait()
+	utconfig := utility.InitConfig()
+	config := Config{&utconfig}
+	config.WaitGroup.Add(1)
+	// go changeEvent(config.ScheduleChangeChannel)
+	go config.pulse()
+	config.WaitGroup.Wait()
 
 }
 
