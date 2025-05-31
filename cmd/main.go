@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log/slog" // New import
+	"os"       // New import
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +19,11 @@ type Config struct {
 }
 
 func main() {
-	fmt.Println("there")
+	// Configure global slog logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}))
+	slog.SetDefault(logger)
+
+	slog.Debug("Application starting")
 
 	utconfig := utility.InitConfig()
 	config := Config{&utconfig}
@@ -50,16 +56,14 @@ func (c *Config) scheduleUpdateCheck() {
 
 	hash, err := utility.Filemd5sum(c.ScheduleFile)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to calculate file hash", "error", err)
 		return
 	}
-	fmt.Println("\n\n previous hash is", c.ScheduleFileHash)
+	slog.Debug("Schedule file hash check", "previous_hash", c.ScheduleFileHash, "current_hash", hash)
 	if c.ScheduleFileHash != hash {
 		c.ScheduleFileHash = hash
 		c.ScheduleChangeChannel <- true
 	}
-	fmt.Println(hash)
-
 }
 
 func manageTasks(jobs []models.Job) {
@@ -78,9 +82,7 @@ func manageTasks(jobs []models.Job) {
 func distirbuteTasks(inputChannel chan models.Job, jobs []models.Job) {
 
 	for i := 0; i < len(jobs); i++ {
-
-		fmt.Println("thorwing job into channel ", i)
-
+		slog.Debug("Distributing job to input channel", "job_index", i, "job_name", jobs[i].JobName, "task_name", jobs[i].TaskName)
 		inputChannel <- jobs[i]
 
 	}
@@ -93,35 +95,30 @@ func taskProducers(inputChannel chan models.Job, workerNumber int) {
 		select {
 		case job, ok := <-inputChannel:
 			if !ok {
-				fmt.Printf("Worker %d: Input channel closed. Exiting.\n", workerNumber)
+				slog.Info("Input channel closed for worker, exiting", "worker_id", workerNumber)
 				return
 			}
 
-			// Updated log message
-			fmt.Printf("Worker %d: Picked job: %s (Task: %s)\n", workerNumber, job.JobName, job.TaskName)
+			slog.Info("Worker picked job", "worker_id", workerNumber, "job_name", job.JobName, "task_name", job.TaskName)
 
 			if matchCronExpression(job.CronTime, time.Now()) {
-				// This log can be verbose, but useful for seeing cron activity
-				// fmt.Printf("Worker %d: Cron expression matched for job: %s\n", workerNumber, job.JobName)
-
 				task, err := tasks.GetTask(job.TaskName)
 				if err != nil {
-					fmt.Printf("Error in worker %d: Task '%s' not found. Skipping job: '%s'. Error: %v\n", workerNumber, job.TaskName, job.JobName, err)
+					slog.Error("Task not found for job", "worker_id", workerNumber, "task_name", job.TaskName, "job_name", job.JobName, "error", err)
 					continue // Skip to the next job
 				}
 
-				// fmt.Printf("Worker %d: Executing task '%s' for job '%s'\n", workerNumber, job.TaskName, job.JobName)
 				if err := task.Execute(job.TaskParams); err != nil {
-					fmt.Printf("Error in worker %d executing task '%s' for job '%s': %v\n", workerNumber, job.TaskName, job.JobName, err)
+					slog.Error("Task execution failed for job", "worker_id", workerNumber, "task_name", job.TaskName, "job_name", job.JobName, "error", err)
 					continue // Skip to the next job
 				}
 
-				// fmt.Printf("Worker %d: Task '%s' executed successfully for job '%s'. Pushing to queue.\n", workerNumber, job.TaskName, job.JobName)
+				// Consider adding a debug/info log here for successful execution before pushing to queue
 				utility.PushToQueue(job) // Push original job struct to Kafka
 
 			} else {
-				// This part can be noisy if jobs are checked frequently; consider adjusting log level or removing if not essential for normal operation.
-				// fmt.Printf("Worker %d: Cron expression did not match for job: %s\n", workerNumber, job.JobName)
+				// This log can be very frequent if jobs are checked often.
+				// slog.Debug("Cron expression did not match for job", "worker_id", workerNumber, "job_name", job.JobName, "task_name", job.TaskName, "cron_time", job.CronTime)
 			}
 		}
 	}
@@ -136,9 +133,6 @@ func matchCronExpression(expression string, t time.Time) bool {
 
 	// Parse the cron fields
 	minute, hour, day, month, weekday := fields[0], fields[1], fields[2], fields[3], fields[4]
-
-	// fmt.Println("Current ", t.Minute(), t.Hour())
-	// fmt.Println("Previous ", minute, hour)
 
 	// Check if the current time matches the cron expression
 	return matchField(minute, t.Minute()) &&
