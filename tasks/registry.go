@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+	"log/slog" // New import
 	"sync"
 
 	"github.com/c-m3-codin/gsched/models"
@@ -21,10 +22,10 @@ func RegisterTask(task models.Task) {
 
 	name := task.Name()
 	if _, exists := taskRegistry[name]; exists {
-		fmt.Printf("Warning: Task with name '%s' is being overwritten in the registry.\n", name)
+		slog.Warn("Task being overwritten in registry", "task_name", name)
 	}
 	taskRegistry[name] = task
-	fmt.Printf("Task '%s' registered successfully.\n", name)
+	slog.Info("Task registered successfully", "task_name", name)
 }
 
 // GetTask retrieves a task from the registry by its name.
@@ -46,5 +47,5 @@ func UnregisterTaskForTesting(name string) {
 	registryLock.Lock()
 	defer registryLock.Unlock()
 	delete(taskRegistry, name)
-	fmt.Printf("Task '%s' unregistered for testing.\n", name)
+	slog.Debug("Task unregistered for testing", "task_name", name)
 }
