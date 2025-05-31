@@ -8,6 +8,7 @@ import (
 
 	"github.com/c-m3-codin/gsched/constants"
 	"github.com/c-m3-codin/gsched/models"
+	"github.com/c-m3-codin/gsched/tasks" // New import
 	"github.com/c-m3-codin/gsched/utility"
 )
 
@@ -92,21 +93,36 @@ func taskProducers(inputChannel chan models.Job, workerNumber int) {
 		select {
 		case job, ok := <-inputChannel:
 			if !ok {
-				// Channel is closed, exit the loop
-				fmt.Println("Worker", workerNumber, "received signal to stop.")
+				fmt.Printf("Worker %d: Input channel closed. Exiting.\n", workerNumber)
 				return
 			}
 
-			// Process the received job
-			fmt.Println("Picking job:", job, " by worker ", workerNumber)
+			// Updated log message
+			fmt.Printf("Worker %d: Picked job: %s (Task: %s)\n", workerNumber, job.JobName, job.TaskName)
+
 			if matchCronExpression(job.CronTime, time.Now()) {
-				// produce task to queue
-				utility.PushToQueue(job)
-				fmt.Println("\n\n\n\n Cron expression matches the current time.")
+				// This log can be verbose, but useful for seeing cron activity
+				// fmt.Printf("Worker %d: Cron expression matched for job: %s\n", workerNumber, job.JobName)
+
+				task, err := tasks.GetTask(job.TaskName)
+				if err != nil {
+					fmt.Printf("Error in worker %d: Task '%s' not found. Skipping job: '%s'. Error: %v\n", workerNumber, job.TaskName, job.JobName, err)
+					continue // Skip to the next job
+				}
+
+				// fmt.Printf("Worker %d: Executing task '%s' for job '%s'\n", workerNumber, job.TaskName, job.JobName)
+				if err := task.Execute(job.TaskParams); err != nil {
+					fmt.Printf("Error in worker %d executing task '%s' for job '%s': %v\n", workerNumber, job.TaskName, job.JobName, err)
+					continue // Skip to the next job
+				}
+
+				// fmt.Printf("Worker %d: Task '%s' executed successfully for job '%s'. Pushing to queue.\n", workerNumber, job.TaskName, job.JobName)
+				utility.PushToQueue(job) // Push original job struct to Kafka
+
 			} else {
-				fmt.Println("Cron expression does not match the current time.")
+				// This part can be noisy if jobs are checked frequently; consider adjusting log level or removing if not essential for normal operation.
+				// fmt.Printf("Worker %d: Cron expression did not match for job: %s\n", workerNumber, job.JobName)
 			}
-			// produce the job into the queue
 		}
 	}
 }
@@ -121,8 +137,8 @@ func matchCronExpression(expression string, t time.Time) bool {
 	// Parse the cron fields
 	minute, hour, day, month, weekday := fields[0], fields[1], fields[2], fields[3], fields[4]
 
-	fmt.Println("Current ", t.Minute(), t.Hour())
-	fmt.Println("Previous ", minute, hour)
+	// fmt.Println("Current ", t.Minute(), t.Hour())
+	// fmt.Println("Previous ", minute, hour)
 
 	// Check if the current time matches the cron expression
 	return matchField(minute, t.Minute()) &&

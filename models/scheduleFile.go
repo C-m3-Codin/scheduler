@@ -5,8 +5,9 @@ type ScheduleFile struct {
 }
 
 type Job struct {
-	JobName  string `json:"jobName"`
-	Priority int    `json:"priority"`
-	Job      string `json:"job"`
-	CronTime string `json:"cronTime"`
+	JobName    string                 `json:"jobName"` // Remains for descriptive purposes
+	Priority   int                    `json:"priority"`
+	TaskName   string                 `json:"taskName"` // Renamed from Job, holds the identifier of the task
+	TaskParams map[string]interface{} `json:"taskParams,omitempty"` // Parameters for the task
+	CronTime   string                 `json:"cronTime"`
 }
