@@ -106,7 +106,9 @@ func XTestTaskProducers_RegisteredTask_ComplexPanicking(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			taskProducers(inputChannel, 1, nil, "") // Added nil, "" for producer and jobTopic
+
 		} ()
 		wg.Wait()
 	})
@@ -143,6 +145,7 @@ func XTestTaskProducers_UnregisteredTask(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			taskProducers(inputChannel, 2, nil, "") // Added nil, ""
+
 		}()
 		wg.Wait()
 	})
@@ -176,7 +179,9 @@ func XTestTaskProducers_TaskExecutionFailure(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			taskProducers(inputChannel, 3, nil, "") // Added nil, ""
+r
 		}()
 		wg.Wait()
 	})
@@ -221,7 +226,9 @@ func XTestTaskProducers_CronNoMatch(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			taskProducers(inputChannel, 4, nil, "") // Added nil, ""
+
 		}()
 		wg.Wait()
 	})

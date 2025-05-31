@@ -3,8 +3,10 @@ package tasks
 import (
 	"bytes"
 	"fmt"
+
 	"log/slog" // New import for slog
 	// "os"    // No longer needed after removing captureStdOutput
+
 	"strings"
 	"testing"
 
@@ -25,15 +27,18 @@ func (m *MockTask) Execute(params map[string]interface{}) error {
 	if m.ExecuteFunc != nil {
 		return m.ExecuteFunc(params)
 	}
+
 	// Keep a simple fmt.Printf here for direct test feedback if needed,
 	// but this task's execution isn't the primary focus of registry tests.
 	// fmt.Printf("MockTask %s executed with params: %v\n", m.TaskName, params)
+
 	return nil
 }
 
 func resetRegistry() {
 	// Clear the existing registry
 	taskRegistry = make(map[string]models.Task)
+
 	// It's also important to reset the slog default handler if tests modify it,
 	// but captureSlogOutput handles this for its scope.
 }
@@ -54,6 +59,7 @@ func captureSlogOutput(fn func()) string {
 	defer slog.SetDefault(oldLogger)
 
 	fn() // Execute the function that should generate log output
+
 	return buf.String()
 }
 
@@ -100,6 +106,7 @@ func TestOverwriteTask(t *testing.T) {
 		!strings.Contains(logOutput, `"msg":"Task being overwritten in registry"`) ||
 		!strings.Contains(logOutput, `"task_name":"OverwriteTest"`) {
 		t.Errorf("Expected warning log for task overwrite not found or incorrect. Log: %s", logOutput)
+
 	}
 
 	retrievedTask, err := GetTask("OverwriteTest")
@@ -118,6 +125,7 @@ func TestRegisterTaskLogsSuccess(t *testing.T) {
 	resetRegistry()
 	task := &MockTask{TaskName: "SuccessfulRegistrationTest"}
 
+
 	logOutput := captureSlogOutput(func() {
 		RegisterTask(task)
 	})
@@ -126,18 +134,22 @@ func TestRegisterTaskLogsSuccess(t *testing.T) {
 		!strings.Contains(logOutput, `"msg":"Task registered successfully"`) ||
 		!strings.Contains(logOutput, `"task_name":"SuccessfulRegistrationTest"`) {
 		t.Errorf("Expected info log for successful task registration not found or incorrect. Log: %s", logOutput)
+
 	}
 }
 
 func TestUnregisterTask(t *testing.T) {
 	resetRegistry()
 	task := &MockTask{TaskName: "UnregisterTest"}
+
 	RegisterTask(task) // This will produce INFO log, not captured by this test's logOutput
+
 
 	_, err := GetTask("UnregisterTest")
 	if err != nil {
 		t.Fatalf("Task should be present before unregistering, but got error: %v", err)
 	}
+
 
 	// Capture the output specifically for UnregisterTaskForTesting
 	logOutput := captureSlogOutput(func() {
@@ -151,6 +163,7 @@ func TestUnregisterTask(t *testing.T) {
 	}
 
 	_, err = GetTask("UnregisterTest") // Re-check err after getting the task
+
 	if err == nil {
 		t.Errorf("Expected error after unregistering task, but GetTask succeeded.")
 	}

@@ -1,10 +1,12 @@
 package main
 
 import (
+
 	"flag"
 	"fmt" // Keep for Sprintf if used, or remove if not. The prompt removed it from one slog call.
 	"log/slog"
 	"os"
+
 	"strconv"
 	"strings"
 	"sync" // Ensure sync is imported if WaitGroup is used directly in Config (it's in utility.Config)
@@ -13,7 +15,9 @@ import (
 	"github.com/c-m3-codin/gsched/config"
 	"github.com/c-m3-codin/gsched/constants"
 	"github.com/c-m3-codin/gsched/models"
+
 	"github.com/c-m3-codin/gsched/tasks"
+
 	"github.com/c-m3-codin/gsched/utility"
 	"github.com/c-m3-codin/gsched/worker"
 	"github.com/confluentinc/confluent-kafka-go/kafka" // Corrected to v1 import path
@@ -32,6 +36,7 @@ var appConfig config.AppConfig // Package-level variable for loaded config
 
 func main() {
 	// Configure global slog logger
+
 	// Ensure AddSource: true is included if file/line numbers are desired in logs.
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}))
 	slog.SetDefault(logger)
@@ -61,6 +66,7 @@ func main() {
 			os.Exit(1)
 		}
 		defer producer.Close()
+
 
 		schedulerConfig := Config{
 			Config:   &utConfig, // Embed the utility config
@@ -100,8 +106,10 @@ func (c Config) pulse() {
 	}
 }
 
+
 // manageTasks now accepts producer and jobTopic
 func manageTasks(jobs []models.Job, producer *kafka.Producer, jobTopic string) {
+
 	workersCount := constants.JobProducerWorkerCount
 	inputChannel := make(chan models.Job, workersCount)
 
@@ -140,11 +148,14 @@ func taskProducers(inputChannel chan models.Job, workerNumber int, producer *kaf
 				task, err := tasks.GetTask(job.TaskName)
 				if err != nil {
 					slog.Error("Task not found for job", "worker_id", workerNumber, "task_name", job.TaskName, "job_name", job.JobName, "error", err)
+
 					continue
+
 				}
 
 				if err := task.Execute(job.TaskParams); err != nil {
 					slog.Error("Task execution failed for job", "worker_id", workerNumber, "task_name", job.TaskName, "job_name", job.JobName, "error", err)
+
 					continue
 				}
 
@@ -156,6 +167,7 @@ func taskProducers(inputChannel chan models.Job, workerNumber int, producer *kaf
 				utility.PushToQueue(producer, jobTopic, job)
 
 			} else {
+
 				// slog.Debug("Cron expression did not match for job", "worker_id", workerNumber, "job_name", job.JobName, "task_name", job.TaskName, "cron_time", job.CronTime)
 			}
 		}

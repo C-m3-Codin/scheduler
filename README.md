@@ -4,6 +4,7 @@ This repository contains a job dispatcher written in Go that dispatches jobs to 
 
 ## Features
 
+
 - **Dual Role Operation**: Can run as a `scheduler` (producing jobs to Kafka based on a schedule) or as a `worker` (consuming and executing jobs from Kafka), configurable via a command-line flag.
 - **Scheduled Job Dispatching (Scheduler Role)**: Dispatches jobs based on cron expressions. The application reads a schedule configuration file and uses cron expressions (e.g., `` `minute hour day month weekday` ``) to determine when each job should be executed.
 - **Kafka Integration**: Pushes jobs to a Kafka queue (scheduler role) and consumes jobs from a queue (worker role).
@@ -38,6 +39,7 @@ job.topic=JobQueue
 consumer.group.id=gsched-worker-group
 ```
 Make sure this file exists at the path `config/kafka.properties` relative to the application's working directory, or adjust the path in `cmd/main.go` where `config.LoadConfig()` is called if you prefer a different location.
+
 
 ### Prerequisites
 
@@ -94,6 +96,7 @@ The project uses Go modules for dependency management and a `makefile` for commo
    (Replace `<URL_OF_THIS_REPOSITORY>` with the actual URL and `<NAME_OF_THE_CLONED_DIRECTORY>` with the directory name created by git clone, which is typically the repository name.)
 
 2. **Build the application:**
+
    You can build the application using the standard Go build command. Navigate to the root of the project directory.
    ```bash
    go build -o bin/gsched cmd/main.go
@@ -129,6 +132,7 @@ The project uses Go modules for dependency management and a `makefile` for commo
    ./bin/gsched --role=worker
    ```
    (Previous references to `make run` should be replaced with these methods if a Makefile is not consistently available or set up to handle role flags.)
+
 
 ### 4. Understanding the Schedule Configuration (`schedule/schedule.json`)
 
