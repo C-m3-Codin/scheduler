@@ -6,9 +6,9 @@ This repository contains a job dispatcher written in Go that dispatches jobs to 
 
 
 - **Dual Role Operation**: Can run as a `scheduler` (producing jobs to Kafka based on a schedule) or as a `worker` (consuming and executing jobs from Kafka), configurable via a command-line flag.
-- **Scheduled Job Dispatching (Scheduler Role)**: Dispatches jobs based on cron expressions. The application reads a schedule configuration file and uses cron expressions (e.g., `` `minute hour day month weekday` ``) to determine when each job should be executed.
-- **Kafka Integration**: Pushes jobs to a Kafka queue (scheduler role) and consumes jobs from a queue (worker role).
-- **Custom Task Execution (Worker Role)**: Workers execute tasks based on `taskName` specified in the job. The system supports registration of custom task implementations.
+- **Scheduler role: Executes tasks based on cron expressions. If execution is successful, the original job details are then dispatched to a Kafka queue.**
+- **Kafka Integration**: The scheduler queues jobs to Kafka *after* successful local execution. Workers consume jobs from this queue.
+- **Custom Task Execution (Worker Role)**: Workers process jobs that have been validated and queued by the scheduler, executing tasks based on `taskName` specified in the job. The system supports registration of custom task implementations.
 - **Configuration File Monitoring (Scheduler Role)**: Monitors the schedule configuration file for any changes. If a change is detected (based on MD5 hash comparison), the schedule is reloaded automatically.
 - **Concurrent Task Producers (Scheduler Role)**: Utilizes multiple goroutines to concurrently check job schedules and produce tasks to the Kafka queue.
 - **Concurrent Worker Goroutines (Worker Role)**: Spawns multiple goroutines to consume and process jobs from Kafka concurrently.
@@ -43,7 +43,7 @@ Make sure this file exists at the path `config/kafka.properties` relative to the
 
 ### Prerequisites
 
-- Go (version 1.20 or higher)
+- Go (version 1.21 or higher)
 - Kafka
 - Zookeeper (for Kafka coordination)
 
@@ -53,7 +53,7 @@ This section will guide you through setting up and running the Job Dispatcher pr
 
 ### 1. Set Up Go Environment
 
-Ensure you have Go installed on your system. This project uses Go version `1.20` as specified in the `go.mod` file. You can download Go from the [official Go website](https://golang.org/dl/).
+Ensure you have Go installed on your system. This project uses Go version `1.21` as specified in the `go.mod` file. You can download Go from the [official Go website](https://golang.org/dl/).
 
 Verify your Go installation:
 ```bash
@@ -101,7 +101,7 @@ The project uses Go modules for dependency management and a `makefile` for commo
    ```bash
    go build -o bin/gsched cmd/main.go
    ```
-   This will create an executable at `bin/gsched`. (Previously, references to `make build` might have existed, but direct `go build` is standard).
+   This will create an executable at `bin/gsched`.
 
 3. **Run the application:**
    The application can run in one of two roles: `scheduler` or `worker`, specified using the `--role` command-line flag. The default role is `scheduler`.
@@ -131,7 +131,7 @@ The project uses Go modules for dependency management and a `makefile` for commo
    # Run as worker
    ./bin/gsched --role=worker
    ```
-   (Previous references to `make run` should be replaced with these methods if a Makefile is not consistently available or set up to handle role flags.)
+   Note: The `make run` command (if used) will run the scheduler by default and does not support the `--role` flag. For specifying roles, use `go run cmd/main.go --role=<role>` or run the compiled binary directly with the flag.
 
 
 ### 4. Understanding the Schedule Configuration (`schedule/schedule.json`)
@@ -156,7 +156,7 @@ The Job Dispatcher reads its job schedule from a JSON file located at `schedule/
       "taskParams": {
         "message": "This is a scheduled log message for MyExampleLogger, running every 5 minutes."
       },
-      "cronTime": "*/5 * * * *"
+      "cronTime": "* * * * *"
     },
     {
       "jobName": "MyHourlyEcho",
@@ -166,7 +166,7 @@ The Job Dispatcher reads its job schedule from a JSON file located at `schedule/
         "source": "schedule.json",
         "details": "Echoing parameters for MyHourlyEcho job"
       },
-      "cronTime": "0 * * * *"
+      "cronTime": "* * * * *"
     }
     // ... more jobs
   ]
@@ -258,6 +258,6 @@ You can see further examples of task definitions and registrations in `tasks/exa
 
 ## TODO
 
-- [ ] **Implement Consumer Workers**: Develop worker applications that subscribe to the Kafka topics, consume the dispatched job messages, and execute/process the actual tasks defined in the jobs.
+- [x] **Implement Consumer Workers**: Develop worker applications that subscribe to the Kafka topics, consume the dispatched job messages, and execute/process the actual tasks defined in the jobs.
 - [ ] **Dynamic Consumer Worker Pooling**: Implement a mechanism to dynamically scale the number of consumer workers. This pool of consumer workers should be able to increase or decrease its size based on the load in the Kafka job queue (e.g., number of messages pending, processing rate).
 
