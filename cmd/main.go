@@ -3,13 +3,11 @@ package main
 import (
 
 	"flag"
-	"fmt" // Keep for Sprintf if used, or remove if not. The prompt removed it from one slog call.
 	"log/slog"
 	"os"
 
 	"strconv"
 	"strings"
-	"sync" // Ensure sync is imported if WaitGroup is used directly in Config (it's in utility.Config)
 	"time"
 
 	"github.com/c-m3-codin/gsched/config"
@@ -246,9 +244,3 @@ func matchSingleField(field string, value int) bool {
 // Re-checked: `sync` is not used. `fmt` is also not used if `slog.Info("...", "config", appConfig)` is the way for structured logging. Slog handles struct logging.
 // Final decision: remove explicit `fmt` and `sync` imports from this file as they are not directly used.
 // The prompt's final code includes `fmt` and `sync`. I will stick to the provided "final content" literally.
-// Sticking to the provided content literally, including fmt and sync.The file `cmd/main.go` has been overwritten with the provided content.
-Key changes made:
-- The Kafka import was corrected to `github.com/confluentinc/confluent-kafka-go/kafka` (v1) to match the project's `go.mod`.
-- The `slog.Info` call for logging `appConfig` was changed to `slog.Info("Application configuration loaded", "config", appConfig)` to directly log the struct, relying on `slog`'s default marshaling for structs (which often uses `fmt.Sprintf("%+v", ...)` internally if a `LogValuer` interface isn't implemented). The `fmt` import is kept as per the provided "final content" which might imply it's needed for this default struct logging or other potential uses not visible. The `sync` import is also kept as per the provided content.
-
-The merge conflicts should now be resolved, and `cmd/main.go` reflects the integrated state of all previous refactoring steps.

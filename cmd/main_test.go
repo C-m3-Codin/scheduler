@@ -181,7 +181,7 @@ func XTestTaskProducers_TaskExecutionFailure(t *testing.T) {
 			defer wg.Done()
 
 			taskProducers(inputChannel, 3, nil, "") // Added nil, ""
-r
+
 		}()
 		wg.Wait()
 	})
