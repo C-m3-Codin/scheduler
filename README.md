@@ -4,10 +4,42 @@ This repository contains a job dispatcher written in Go that dispatches jobs to 
 
 ## Features
 
-- **Scheduled Job Dispatching**: Dispatches jobs based on cron expressions. The application reads a schedule configuration file and uses cron expressions (e.g., `` `minute hour day month weekday` ``) to determine when each job should be executed.
-- **Kafka Integration**: Pushes jobs to a Kafka queue. Once a job's scheduled time arrives, it is pushed as a message to a specified Kafka topic, allowing distributed workers to consume and process these jobs.
-- **Configuration File Monitoring**: Monitors the schedule configuration file for any changes. If a change is detected (based on MD5 hash comparison), the schedule is reloaded automatically.
-- **Concurrent Task Producers**: Utilizes multiple goroutines to concurrently check job schedules and produce tasks to the Kafka queue. This allows for efficient handling of multiple jobs defined in the schedule.
+
+- **Dual Role Operation**: Can run as a `scheduler` (producing jobs to Kafka based on a schedule) or as a `worker` (consuming and executing jobs from Kafka), configurable via a command-line flag.
+- **Scheduled Job Dispatching (Scheduler Role)**: Dispatches jobs based on cron expressions. The application reads a schedule configuration file and uses cron expressions (e.g., `` `minute hour day month weekday` ``) to determine when each job should be executed.
+- **Kafka Integration**: Pushes jobs to a Kafka queue (scheduler role) and consumes jobs from a queue (worker role).
+- **Custom Task Execution (Worker Role)**: Workers execute tasks based on `taskName` specified in the job. The system supports registration of custom task implementations.
+- **Configuration File Monitoring (Scheduler Role)**: Monitors the schedule configuration file for any changes. If a change is detected (based on MD5 hash comparison), the schedule is reloaded automatically.
+- **Concurrent Task Producers (Scheduler Role)**: Utilizes multiple goroutines to concurrently check job schedules and produce tasks to the Kafka queue.
+- **Concurrent Worker Goroutines (Worker Role)**: Spawns multiple goroutines to consume and process jobs from Kafka concurrently.
+- **Externalized Kafka Configuration**: Kafka connection details (`bootstrap.servers`, `job.topic`, `consumer.group.id`) are configured via a `config/kafka.properties` file, with sensible defaults.
+
+## Configuration
+
+The application uses a properties file located at `config/kafka.properties` to configure Kafka connection details and other parameters. If this file is not found at startup, or if specific keys are missing, the application will use default values and log a warning.
+
+The following keys can be configured in `config/kafka.properties`:
+
+-   `bootstrap.servers`: A comma-separated list of Kafka broker addresses (e.g., `localhost:9092,localhost:9093`).
+    -   Default: `"localhost:29092"` (Note: The default in constants might differ from the example properties file, ensure consistency or document the specific default used on fallback).
+-   `job.topic`: The Kafka topic where jobs are produced by the scheduler and consumed by workers.
+    -   Default: `"JobQueue"`
+-   `consumer.group.id`: The Kafka consumer group ID used by workers when consuming jobs. This allows multiple worker instances to share the load.
+    -   Default: `"gsched-default-group"`
+
+**Example `config/kafka.properties`:**
+```properties
+# Kafka Broker Addresses
+bootstrap.servers=localhost:29092,localhost:29093
+
+# Topic for Job Queue
+job.topic=JobQueue
+
+# Consumer Group ID for Workers
+consumer.group.id=gsched-worker-group
+```
+Make sure this file exists at the path `config/kafka.properties` relative to the application's working directory, or adjust the path in `cmd/main.go` where `config.LoadConfig()` is called if you prefer a different location.
+
 
 ### Prerequisites
 
@@ -64,25 +96,43 @@ The project uses Go modules for dependency management and a `makefile` for commo
    (Replace `<URL_OF_THIS_REPOSITORY>` with the actual URL and `<NAME_OF_THE_CLONED_DIRECTORY>` with the directory name created by git clone, which is typically the repository name.)
 
 2. **Build the application:**
-   The `makefile` provides a convenient way to build the project. This command will also handle formatting and dependency vendoring.
+
+   You can build the application using the standard Go build command. Navigate to the root of the project directory.
    ```bash
-   make build
+   go build -o bin/gsched cmd/main.go
    ```
-   This will create an executable at `bin/main`.
+   This will create an executable at `bin/gsched`. (Previously, references to `make build` might have existed, but direct `go build` is standard).
 
 3. **Run the application:**
-   You can run the application using the `makefile`:
+   The application can run in one of two roles: `scheduler` or `worker`, specified using the `--role` command-line flag. The default role is `scheduler`.
+
+   *   **Scheduler Role**: Reads `schedule/schedule.json`, monitors it for changes, and dispatches jobs to Kafka based on their cron expressions.
+   *   **Worker Role**: Consumes jobs from the Kafka topic and executes the defined tasks.
+
+   **Using `go run`:**
    ```bash
-   make run
-   ```
-   Alternatively, after building, you can run the executable directly:
-   ```bash
-   ./bin/main
-   ```
-   Or, run directly using `go run`:
-   ```bash
+   # Run as scheduler (default role)
    go run cmd/main.go
+   # Explicitly run as scheduler
+   go run cmd/main.go --role=scheduler
+
+   # Run as worker
+   go run cmd/main.go --role=worker
    ```
+
+   **Using the compiled binary:**
+   After building the application (e.g., to `bin/gsched`):
+   ```bash
+   # Run as scheduler (default role)
+   ./bin/gsched
+   # Explicitly run as scheduler
+   ./bin/gsched --role=scheduler
+
+   # Run as worker
+   ./bin/gsched --role=worker
+   ```
+   (Previous references to `make run` should be replaced with these methods if a Makefile is not consistently available or set up to handle role flags.)
+
 
 ### 4. Understanding the Schedule Configuration (`schedule/schedule.json`)
 

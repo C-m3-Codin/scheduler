@@ -3,8 +3,10 @@ package tasks
 import (
 	"bytes"
 	"fmt"
-	// "log" // Removed as it's unused
-	"os"
+
+	"log/slog" // New import for slog
+	// "os"    // No longer needed after removing captureStdOutput
+
 	"strings"
 	"testing"
 
@@ -25,27 +27,39 @@ func (m *MockTask) Execute(params map[string]interface{}) error {
 	if m.ExecuteFunc != nil {
 		return m.ExecuteFunc(params)
 	}
-	fmt.Printf("MockTask %s executed with params: %v\n", m.TaskName, params)
+
+	// Keep a simple fmt.Printf here for direct test feedback if needed,
+	// but this task's execution isn't the primary focus of registry tests.
+	// fmt.Printf("MockTask %s executed with params: %v\n", m.TaskName, params)
+
 	return nil
 }
 
 func resetRegistry() {
 	// Clear the existing registry
 	taskRegistry = make(map[string]models.Task)
+
+	// It's also important to reset the slog default handler if tests modify it,
+	// but captureSlogOutput handles this for its scope.
 }
 
-// Helper to capture stdout/stderr output
-func captureStdOutput(f func()) string {
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	f() // Execute the function whose output we want to capture
-
-	w.Close()
-	os.Stdout = oldStdout // Restore stdout
+// Helper to capture slog output for testing warnings/debug messages
+func captureSlogOutput(fn func()) string {
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	// Create a new handler writing to the local buffer
+	// Using a simple text handler for easier string matching in these tests,
+	// assuming the global logger might be JSON. Or use JSON and match parts.
+	// For consistency with global logger, let's assume JSON and match key parts.
+	handler := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug, AddSource: false}) // AddSource:false for simpler logs in test
+	// Store the default logger
+	oldLogger := slog.Default()
+	// Set our new logger as default
+	slog.SetDefault(slog.New(handler))
+	// Ensure the original logger is restored after the function call
+	defer slog.SetDefault(oldLogger)
+
+	fn() // Execute the function that should generate log output
+
 	return buf.String()
 }
 
@@ -83,13 +97,16 @@ func TestOverwriteTask(t *testing.T) {
 	RegisterTask(task1) // First registration
 
 	// Capture output during the second registration to check for the warning
-	output := captureStdOutput(func() {
+	logOutput := captureSlogOutput(func() {
 		RegisterTask(task2) // Second registration, should overwrite and warn
 	})
 
-	expectedWarning := "Warning: Task with name 'OverwriteTest' is being overwritten in the registry."
-	if !strings.Contains(output, expectedWarning) {
-		t.Errorf("Expected log output to contain warning '%s', but got: %s", expectedWarning, output)
+	// Check for structured log parts for the warning
+	if !strings.Contains(logOutput, `"level":"WARN"`) ||
+		!strings.Contains(logOutput, `"msg":"Task being overwritten in registry"`) ||
+		!strings.Contains(logOutput, `"task_name":"OverwriteTest"`) {
+		t.Errorf("Expected warning log for task overwrite not found or incorrect. Log: %s", logOutput)
+
 	}
 
 	retrievedTask, err := GetTask("OverwriteTest")
@@ -108,36 +125,45 @@ func TestRegisterTaskLogsSuccess(t *testing.T) {
 	resetRegistry()
 	task := &MockTask{TaskName: "SuccessfulRegistrationTest"}
 
-	output := captureStdOutput(func() {
+
+	logOutput := captureSlogOutput(func() {
 		RegisterTask(task)
 	})
 
-	expectedLog := "Task 'SuccessfulRegistrationTest' registered successfully."
-	if !strings.Contains(output, expectedLog) {
-		t.Errorf("Expected log output to contain success message '%s', but got: %s", expectedLog, output)
+	if !strings.Contains(logOutput, `"level":"INFO"`) ||
+		!strings.Contains(logOutput, `"msg":"Task registered successfully"`) ||
+		!strings.Contains(logOutput, `"task_name":"SuccessfulRegistrationTest"`) {
+		t.Errorf("Expected info log for successful task registration not found or incorrect. Log: %s", logOutput)
+
 	}
 }
 
 func TestUnregisterTask(t *testing.T) {
 	resetRegistry()
 	task := &MockTask{TaskName: "UnregisterTest"}
-	RegisterTask(task)
+
+	RegisterTask(task) // This will produce INFO log, not captured by this test's logOutput
+
 
 	_, err := GetTask("UnregisterTest")
 	if err != nil {
 		t.Fatalf("Task should be present before unregistering, but got error: %v", err)
 	}
 
-	output := captureStdOutput(func() {
+
+	// Capture the output specifically for UnregisterTaskForTesting
+	logOutput := captureSlogOutput(func() {
 		UnregisterTaskForTesting("UnregisterTest")
 	})
 
-	expectedLog := "Task 'UnregisterTest' unregistered for testing."
-	if !strings.Contains(output, expectedLog) {
-		t.Errorf("Expected log output to contain unregister message '%s', but got: %s", expectedLog, output)
+	if !strings.Contains(logOutput, `"level":"DEBUG"`) ||
+		!strings.Contains(logOutput, `"msg":"Task unregistered for testing"`) ||
+		!strings.Contains(logOutput, `"task_name":"UnregisterTest"`) {
+		t.Errorf("Expected debug log for task unregistration not found or incorrect. Log: %s", logOutput)
 	}
 
-	_, err = GetTask("UnregisterTest")
+	_, err = GetTask("UnregisterTest") // Re-check err after getting the task
+
 	if err == nil {
 		t.Errorf("Expected error after unregistering task, but GetTask succeeded.")
 	}
