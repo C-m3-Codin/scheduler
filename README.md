@@ -84,37 +84,127 @@ The project uses Go modules for dependency management and a `makefile` for commo
    go run cmd/main.go
    ```
 
-### 4. Understanding the Schedule Configuration
+### 4. Understanding the Schedule Configuration (`schedule/schedule.json`)
 
-The Job Dispatcher reads its job schedule from a JSON file located at `schedule/schedule.json` by default. This file contains an array of job objects.
+The Job Dispatcher reads its job schedule from a JSON file located at `schedule/schedule.json` by default. This file contains an array of job objects. Each job has the following fields:
 
-**Structure of `schedule.json`:**
+- `jobName`: A descriptive name for the job (e.g., "DailyReportGenerator"). This is primarily for human readability and logging.
+- `priority`: An integer priority for the job. While defined, this is not actively used by the current scheduler logic but is available for future enhancements or custom consumer logic.
+- `taskName`: **(Important)** The string identifier of the task to be executed. This must match the name returned by the `Name()` method of a registered `models.Task` implementation (e.g., `"LogTask"`, `"EchoTask"`).
+- `taskParams`: A JSON object containing parameters specific to the task. These parameters are passed as a `map[string]interface{}` to the task's `Execute` method. This field is optional; if omitted or empty, an empty map will be passed to the task.
+- `cronTime`: A standard cron expression (e.g., `` `0 * * * *` `` for hourly execution) defining when the job should run. The format is `minute hour day-of-month month day-of-week`.
+
+**Example `schedule.json` entry:**
+
 ```json
 {
-   "jobs": [
+  "jobs": [
     {
-        "jobName": "uniqueJobNameIdentifier",
-        "priority": 5,
-        "job": "actualCommandOrIdentifierForWorker",
-        "cronTime": "* * * * *"
+      "jobName": "MyExampleLogger",
+      "priority": 1,
+      "taskName": "LogTask",
+      "taskParams": {
+        "message": "This is a scheduled log message for MyExampleLogger, running every 5 minutes."
+      },
+      "cronTime": "*/5 * * * *"
     },
     {
-        "jobName": "anotherJob",
-        "priority": 10,
-        "job": "anotherTaskDetails",
-        "cronTime": "0 12 * * MON-FRI"
+      "jobName": "MyHourlyEcho",
+      "priority": 2,
+      "taskName": "EchoTask",
+      "taskParams": {
+        "source": "schedule.json",
+        "details": "Echoing parameters for MyHourlyEcho job"
+      },
+      "cronTime": "0 * * * *"
     }
     // ... more jobs
-]
+  ]
+}
+```
+This example schedules `LogTask` to run every 5 minutes with a specific message, and `EchoTask` to run hourly with its own set of parameters.
+
+The application monitors `schedule/schedule.json` for changes and reloads the schedule automatically if the file is modified.
+
+## Implementing Custom Tasks
+
+The scheduler now supports custom task implementations, allowing you to define specific actions to be executed.
+
+### 1. Define Your Task
+
+To create a custom task, your Go struct must implement the `models.Task` interface, which is defined in `models/task.go`:
+
+```go
+package models
+
+// Task represents a job that can be scheduled and executed.
+// Implementations of this interface define specific actions to be performed.
+type Task interface {
+	// Name returns the unique identifier for the task.
+	// This name is used in the schedule.json to refer to this task.
+	Name() string
+
+	// Execute performs the action defined by the task.
+	// params provides a way to pass task-specific parameters defined in schedule.json.
+	// It returns an error if the execution fails, otherwise nil.
+	Execute(params map[string]interface{}) error
 }
 ```
 
-- `jobName`: A string to uniquely identify the job.
-- `priority`: An integer representing the job's priority (higher value could mean higher priority, depending on consumer logic).
-- `job`: A string field that can contain details about the task, such as a command to execute, a script name, or parameters for a worker. In the example `schedule/schedule.json` provided in the repository, this is set to `"fileName"`; this value is illustrative and its specific interpretation is determined by the consumer applications that will process these jobs from the Kafka queue.
-- `cronTime`: A standard cron expression (e.g., `` `minute hour day_of_month month day_of_week` ``) that defines when the job should be dispatched. For example, `` `* * * * *` `` runs every minute, and `` `0 12 * * MON-FRI` `` runs at 12:00 PM on weekdays.
+-   `Name() string`: This method should return a unique string identifier for your task. This is the name you will use in the `taskName` field in `schedule/schedule.json`.
+-   `Execute(params map[string]interface{}) error`: This method contains the core logic of your task. The `params` map will be populated from the `taskParams` JSON object in `schedule/schedule.json` for the corresponding job. Return `nil` if the task execution is successful, or an `error` if something goes wrong.
 
-The application monitors `schedule/schedule.json` for changes and reloads the schedule automatically if the file is modified.
+**Example Custom Task:**
+
+Here's a basic example of how you might define a custom task in your own package (e.g., `mytasks/custom_task.go`):
+
+```go
+package mytasks
+
+import (
+	"fmt"
+	"github.com/c-m3-codin/gsched/models"
+	"github.com/c-m3-codin/gsched/tasks" // For task registration
+)
+
+type MyGreeterTask struct{}
+
+func (mgt *MyGreeterTask) Name() string {
+	return "MyGreeterTask" // This name is used in schedule.json
+}
+
+func (mgt *MyGreeterTask) Execute(params map[string]interface{}) error {
+	target, ok := params["targetPerson"].(string)
+	if !ok {
+		// It's good practice to return an error if required parameters are missing or invalid.
+		return fmt.Errorf("MyGreeterTask: 'targetPerson' parameter is missing or not a string")
+	}
+
+	greeting, _ := params["greetingMessage"].(string) // Optional parameter
+	if greeting == "" {
+		greeting = "Hello" // Default greeting
+	}
+
+	fmt.Printf("%s, %s! MyGreeterTask executed successfully.\n", greeting, target)
+	return nil
+}
+
+// It's common practice to register your task(s) in an init function
+// within the same package where they are defined.
+func init() {
+	// Create an instance of your task and register it.
+	// The tasks.RegisterTask function is provided by the scheduler's task system.
+	tasks.RegisterTask(&MyGreeterTask{})
+}
+```
+
+### 2. Register Your Task
+
+For the scheduler to be able to find and execute your custom task, it must be registered with the central task registry. This is typically done using an `init()` function in the Go package where your task is defined, as shown in the example above.
+
+The `tasks.RegisterTask()` function takes an instance of your task (which must implement `models.Task`). When your application starts, Go will execute all `init()` functions, ensuring your tasks are registered before the scheduler needs them.
+
+You can see further examples of task definitions and registrations in `tasks/example_tasks.go`, which includes `LogTask` and `EchoTask`.
 
 ## TODO
 

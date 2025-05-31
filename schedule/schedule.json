@@ -1,75 +1,59 @@
 {
-   "jobs": [
+  "jobs": [
     {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"* * * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"* 17 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"* 17 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"* 17 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"56 16 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"5 10 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
-    },{
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
-    },  {
-        "jobName":"newJob",
-        "priority":5,
-        "job":"fileName",
-        "cronTime":"1 4 * * *"
+      "jobName": "FrequentLogger",
+      "priority": 1,
+      "taskName": "LogTask",
+      "taskParams": {
+        "message": "This is a frequent log message every minute from schedule.json for LogTask."
+      },
+      "cronTime": "* * * * *"
+    },
+    {
+      "jobName": "FrequentEcho",
+      "priority": 2,
+      "taskName": "EchoTask",
+      "taskParams": {
+        "source": "schedule.json",
+        "trigger": "cron",
+        "details": "Echoing parameters for FrequentEcho job every minute."
+      },
+      "cronTime": "* * * * *"
+    },
+    {
+      "jobName": "AnotherLoggerInstance",
+      "priority": 1,
+      "taskName": "LogTask",
+      "taskParams": {
+        "message": "A different log message for another LogTask instance."
+      },
+      "cronTime": "* * * * *"
+    },
+    {
+      "jobName": "EchoWithNoParamsTest",
+      "priority": 3,
+      "taskName": "EchoTask",
+      "taskParams": {},
+      "cronTime": "* * * * *"
+    },
+    {
+      "jobName": "UnregisteredExample",
+      "priority": 5,
+      "taskName": "NonExistentTask",
+      "taskParams": {
+        "note": "This task is intentionally not registered to test error handling.",
+        "data": "some_value"
+      },
+      "cronTime": "* * * * *"
+    },
+    {
+      "jobName": "LogTaskMissingParam",
+      "priority": 4,
+      "taskName": "LogTask",
+      "taskParams": {
+        "wrong_param": "This LogTask will fail due to missing 'message' parameter."
+      },
+      "cronTime": "* * * * *"
     }
-]
+  ]
 }
